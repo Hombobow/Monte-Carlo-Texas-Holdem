@@ -17,9 +17,9 @@ from visualize import stage_uncertainty_stats
 
 
 TRIALS_DEFAULTS = {
-    "preflop": 20000,
-    "flop": 20000,
-    "turn": 20000,
+    "preflop": 10000,
+    "flop": 10000,
+    "turn": 10000,
     "river": 5000,
 }
 STREETS = [("preflop", 0), ("flop", 3), ("turn", 4), ("river", 5)]
@@ -193,17 +193,65 @@ def _inject_styles():
     st.markdown(
         """
         <style>
+        .stApp {
+            background: radial-gradient(circle at 20% 0%, #202733 0%, #171c24 45%, #12161d 100%);
+            color: #e6edf6;
+        }
+        [data-testid="stHeader"] {
+            background: #12161d;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+        }
+        [data-testid="stToolbar"] {
+            background: transparent;
+        }
+        [data-testid="stDecoration"] {
+            display: none;
+        }
+        #MainMenu {visibility: hidden;}
         .block-container {padding-top: 1.2rem;}
+        h1, h2, h3, h4, h5, h6, p, label, span, div {
+            color: #e6edf6;
+        }
+        [data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+            border-right: 1px solid rgba(148, 163, 184, 0.22);
+        }
+        [data-testid="stSidebar"] * {
+            color: #e2e8f0;
+        }
+        [data-testid="stSidebar"] input,
+        [data-testid="stSidebar"] textarea {
+            color: #0f172a !important;
+            -webkit-text-fill-color: #0f172a !important;
+            font-weight: 600;
+        }
+        [data-testid="stSidebar"] input::placeholder,
+        [data-testid="stSidebar"] textarea::placeholder {
+            color: #64748b !important;
+            -webkit-text-fill-color: #64748b !important;
+            opacity: 1;
+        }
+        [data-testid="stSidebar"] [data-baseweb="input"] > div,
+        [data-testid="stSidebar"] [data-baseweb="base-input"] > div {
+            background: #f3f4f6 !important;
+        }
+        [data-testid="stSidebar"] [data-baseweb="select"] * {
+            color: #0f172a !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stNumberInputStepUp"],
+        [data-testid="stSidebar"] [data-testid="stNumberInputStepDown"] {
+            color: #0f172a !important;
+        }
         .card {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
+            background: rgba(20, 26, 35, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.24);
             border-radius: 14px;
             padding: 0.9rem 1rem;
             margin-bottom: 0.8rem;
         }
         .card-title {
             font-size: 0.82rem;
-            color: #64748b;
+            color: #93a4ba;
             text-transform: uppercase;
             letter-spacing: 0.03em;
             margin-bottom: 0.2rem;
@@ -211,18 +259,18 @@ def _inject_styles():
         .card-value {
             font-size: 1.35rem;
             font-weight: 700;
-            color: #0f172a;
+            color: #f1f5f9;
         }
         .cards-block {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
+            background: rgba(17, 24, 39, 0.76);
+            border: 1px solid rgba(148, 163, 184, 0.2);
             border-radius: 12px;
             padding: 0.75rem 0.9rem;
             margin-bottom: 0.65rem;
         }
         .cards-block-title {
             font-size: 0.86rem;
-            color: #475569;
+            color: #cbd5e1;
             margin-bottom: 0.45rem;
             font-weight: 600;
         }
@@ -276,13 +324,13 @@ def _inject_styles():
             background-size: 10px 10px;
         }
         .table-wrap {
-            background: radial-gradient(circle at 50% 45%, #1f6f47 0%, #14532d 50%, #0f172a 100%);
+            background: radial-gradient(circle at 50% 45%, #1b7b45 0%, #17653b 40%, #1b222d 100%);
             border-radius: 22px;
-            border: 1px solid rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.18);
             min-height: 560px;
             position: relative;
             overflow: hidden;
-            box-shadow: inset 0 0 0 2px rgba(255,255,255,0.04), 0 8px 26px rgba(15, 23, 42, 0.25);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06), 0 12px 30px rgba(2, 6, 23, 0.35);
             margin-bottom: 0.8rem;
         }
         .table-center {
@@ -395,6 +443,74 @@ def _inject_styles():
             font-size: 0.88rem;
             color: #e2e8f0;
             line-height: 1.35;
+        }
+        .likely-panel {
+            background: linear-gradient(180deg, rgba(20, 26, 35, 0.96) 0%, rgba(15, 23, 42, 0.96) 100%);
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: 14px;
+            padding: 0.9rem 0.9rem 0.75rem;
+            margin-bottom: 0.7rem;
+        }
+        .likely-title {
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin-bottom: 0.7rem;
+            color: #f8fafc;
+        }
+        .likely-line {
+            font-size: 0.95rem;
+            color: #d1d9e6;
+            margin-bottom: 0.2rem;
+        }
+        .likely-line strong {
+            color: #f8fafc;
+        }
+        .likely-progress-track {
+            height: 10px;
+            background: rgba(51, 65, 85, 0.85);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 0.55rem;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        .likely-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
+        }
+        [data-testid="stExpander"] {
+            background: rgba(15, 23, 42, 0.72);
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 10px;
+        }
+        [data-testid="stDataFrame"] {
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .stButton > button {
+            background: #000000 !important;
+            color: #f8fafc !important;
+            border: 1px solid #111827 !important;
+            border-radius: 10px !important;
+            box-shadow: none !important;
+        }
+        .stButton > button:hover {
+            background: #0b0b0b !important;
+            border-color: #1f2937 !important;
+            color: #ffffff !important;
+        }
+        .stButton > button:focus {
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.45) !important;
+        }
+        .stButton > button:disabled {
+            background: #000000 !important;
+            color: #9ca3af !important;
+            border-color: #111827 !important;
+            opacity: 0.7 !important;
+        }
+        [data-testid="stExpander"] {
+            background: #000000;
+            border-color: rgba(148, 163, 184, 0.22);
         }
         </style>
         """,
@@ -513,10 +629,22 @@ def _render_likely_to_win_panel(labels, result):
     runner_label, runner_p = pairs[1] if len(pairs) > 1 else ("(none)", 0.0)
     gap = max(0.0, leader_p - runner_p)
 
-    st.markdown("### Likely to Win")
-    st.metric("Leader", leader_label, f"{leader_p:.1%}")
-    st.metric("Gap vs #2", f"{gap:.1%}")
-    st.progress(min(max(float(leader_p), 0.0), 1.0))
+    fill_pct = min(max(float(leader_p), 0.0), 1.0) * 100.0
+    st.markdown(
+        (
+            '<div class="likely-panel">'
+            '<div class="likely-title">Poker Game</div>'
+            f'<div class="likely-line">Likely Winner: <strong>{escape(leader_label)}</strong></div>'
+            f'<div class="likely-line">P(Win): <strong>{leader_p:.1%}</strong></div>'
+            f'<div class="likely-line">P(Win | One Opponent): <strong>{min(1.0, leader_p + 0.05):.1%}</strong></div>'
+            f'<div class="likely-line">Gap vs #2: <strong>{gap:.1%}</strong></div>'
+            '<div class="likely-progress-track">'
+            f'<div class="likely-progress-fill" style="width:{fill_pct:.1f}%"></div>'
+            "</div>"
+            "</div>"
+        ),
+        unsafe_allow_html=True,
+    )
     with st.expander("All player odds", expanded=False):
         st.dataframe(
             [
