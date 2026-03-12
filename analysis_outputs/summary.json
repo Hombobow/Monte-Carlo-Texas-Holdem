@@ -1,0 +1,43 @@
+{
+  "n_hands": 40,
+  "n_players": 4,
+  "seed": 109,
+  "trials_by_stage": {
+    "preflop": 1500,
+    "flop": 1500,
+    "turn": 1500,
+    "river": 1000
+  },
+  "monotone_nonincreasing_rate": {
+    "fixed_dealt_hands": 0.725,
+    "unknown_opponents": 0.375
+  },
+  "mean_normalized_entropy_by_street": {
+    "fixed_dealt_hands": {
+      "preflop": 0.9014822826602582,
+      "flop": 0.6217158992255505,
+      "turn": 0.42648364087262286,
+      "river": 0.0
+    },
+    "unknown_opponents": {
+      "preflop": 0.9931976894892568,
+      "flop": 0.9459919056485251,
+      "turn": 0.9336607795080946,
+      "river": 0.8176093966501844
+    }
+  },
+  "mean_avg_ci_width_by_street": {
+    "fixed_dealt_hands": {
+      "preflop": 0.04030141556360027,
+      "flop": 0.03137119162776937,
+      "turn": 0.02237521079246787,
+      "river": 0.0
+    },
+    "unknown_opponents": {
+      "preflop": 0.04279960035888821,
+      "flop": 0.04152848323959731,
+      "turn": 0.041160889768198074,
+      "river": 0.04593271000404603
+    }
+  }
+}
