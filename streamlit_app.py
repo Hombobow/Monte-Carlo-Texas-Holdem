@@ -417,9 +417,11 @@ def _seat_positions(n_players):
 def _seat_cards_html(cards, hidden_count):
     fragments = ['<div class="seat-cards-row">']
     for rank, suit in cards:
-        suit_symbol, _ = _suit_symbol_and_color(suit)
+        suit_symbol, suit_color = _suit_symbol_and_color(suit)
         rank_label = _rank_to_label(rank)
-        fragments.append(f'<div class="seat-card face">{rank_label}{suit_symbol}</div>')
+        fragments.append(
+            f'<div class="seat-card face" style="color:{suit_color}">{rank_label}{suit_symbol}</div>'
+        )
     for _ in range(max(0, hidden_count)):
         fragments.append('<div class="seat-card back"></div>')
     fragments.append("</div>")
@@ -797,25 +799,8 @@ def run_ui():
                 help="Adds short talking points so the app is easier to demo live.",
             )
             if not unknown_mode:
-                show_hands = st.checkbox("Show all players' hole cards", value=True)
-                if show_hands:
-                    enable_folding = st.checkbox("Enable folding controls", value=False)
-                    if enable_folding:
-                        sidebar_labels = [f"Player {i + 1}" for i in range(int(n_players))]
-                        st.markdown("**Folding controls**")
-                        for stage_name in ["flop", "turn", "river"]:
-                            stage_fold_labels[stage_name] = st.multiselect(
-                                f"Players folding before {stage_name}",
-                                options=sidebar_labels,
-                                default=[],
-                                key=f"fold_before_{stage_name}",
-                            )
-                        stage_fold_labels["after_river"] = st.multiselect(
-                            "Players folding after river",
-                            options=sidebar_labels,
-                            default=[],
-                            key="fold_after_river",
-                        )
+                st.caption("Known hole cards are hidden until showdown.")
+                enable_folding = st.checkbox("Enable per-turn folding", value=True)
 
             st.subheader("Trials by stage")
             trials_by_stage = {}
@@ -942,19 +927,17 @@ def run_ui():
         else:
             hole_cards, board_full, labels = deal_random_hand(n_players, rng)
         st.subheader("Hole Cards")
-        if show_hands:
+        hero_label = labels[0] if labels else None
+        hidden_opponents = set(labels[1:]) if len(labels) > 1 else set()
+        if hero_label is not None:
             _render_hands_rows(
                 labels=labels,
                 hands_by_label={label: hole_cards[i] for i, label in enumerate(labels)},
-                hidden_labels=set(),
+                hidden_labels=hidden_opponents,
                 columns_per_row=5,
             )
-            table_hands_by_label = {label: hole_cards[i] for i, label in enumerate(labels)}
-            table_hidden_labels = set()
-        else:
-            st.write("(hidden)")
-            table_hands_by_label = {label: hole_cards[i] for i, label in enumerate(labels)}
-            table_hidden_labels = set(labels)
+        table_hands_by_label = {label: hole_cards[i] for i, label in enumerate(labels)}
+        table_hidden_labels = hidden_opponents
         if manual_entry:
             _render_cards_block("Board seed cards used", cards=board_full)
 
@@ -1113,19 +1096,10 @@ def run_ui():
 
     if stage_views:
         st.markdown("## Hand Flow")
-        flow_signature = (
-            f"{len(stage_views)}|{len(base_labels)}|"
-            + "|".join(
-                f"{view['stage_name']}:{','.join(f'{p:.6f}' for p in view['result']['win_prob'])}"
-                for view in stage_views
-            )
-        )
-        if st.session_state.get("flow_signature") != flow_signature:
-            st.session_state["flow_signature"] = flow_signature
-            st.session_state["flow_stage_idx"] = -1
-            st.session_state["show_winner_popup"] = False
-
         flow_stage_idx = int(st.session_state.get("flow_stage_idx", -1))
+        if flow_stage_idx > len(stage_views):
+            flow_stage_idx = len(stage_views)
+            st.session_state["flow_stage_idx"] = flow_stage_idx
 
         if flow_stage_idx < 0:
             st.markdown(
@@ -1147,6 +1121,15 @@ def run_ui():
             st.subheader(view["stage_name"].title())
             if view["note"]:
                 st.success(view["note"])
+            next_stage_key = (
+                stage_views[flow_stage_idx + 1]["stage_name"]
+                if flow_stage_idx < len(stage_views) - 1
+                else "after_river"
+            )
+            active_labels = [
+                view["labels"][idx]
+                for idx in view.get("active_indices", list(range(len(view["labels"]))))
+            ]
             c_table, c_side = st.columns([3.4, 1.2])
             with c_table:
                 _render_table_scene(
@@ -1180,6 +1163,19 @@ def run_ui():
                             use_container_width=True,
                             hide_index=True,
                         )
+                selected_folds = []
+                if enable_folding and not unknown_mode and active_labels:
+                    fold_prompt = (
+                        f"Players folding before {next_stage_key.title()}"
+                        if next_stage_key != "after_river"
+                        else "Players folding before showdown"
+                    )
+                    selected_folds = st.multiselect(
+                        fold_prompt,
+                        options=active_labels,
+                        default=stage_fold_labels.get(next_stage_key, []),
+                        key=f"runtime_folds_{view['stage_name']}_{next_stage_key}",
+                    )
             with c_side:
                 _render_likely_to_win_panel(view["labels"], view["result"])
 
@@ -1189,6 +1185,18 @@ def run_ui():
             else:
                 next_label = "Reveal Winner"
             if st.button(next_label, type="primary", key=f"continue_stage_{flow_stage_idx}"):
+                if enable_folding and not unknown_mode and active_labels:
+                    if len(selected_folds) >= len(active_labels):
+                        st.warning("Cannot fold all active players. Select fewer folds.")
+                        st.stop()
+                    stage_fold_labels[next_stage_key] = selected_folds
+                    sim_config = dict(st.session_state.get("sim_config", {}))
+                    sim_config["stage_fold_labels"] = stage_fold_labels
+                    st.session_state["sim_config"] = sim_config
+                    st.session_state.pop("sim_cached_stage_views", None)
+                    st.session_state.pop("sim_cached_stage_records", None)
+                    st.session_state.pop("sim_cached_base_labels", None)
+                    st.session_state.pop("sim_cache_key", None)
                 if flow_stage_idx >= len(stage_views) - 1:
                     st.session_state["flow_stage_idx"] = len(stage_views)
                     st.session_state["show_winner_popup"] = True
